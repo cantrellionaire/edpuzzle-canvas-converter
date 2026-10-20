@@ -1,28 +1,14 @@
 import {canvas,edpuzzle,review,output} from './core.js';
-const $=id=>document.getElementById(id);let book,records=[],issues=[],pm={},vm={},result,busy=false,version=0;let canvasFiles=[],edpuzzleFiles=[];let pointOverrides={},pointsBlocked=false;const urls=[];
+const $=id=>document.getElementById(id);let book,records=[],issues=[],pm={},vm={},result,busy=false,version=0;let canvasFiles=[],edpuzzleFiles=[];const urls=[];
 function el(tag,text){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;}
-function forget(){version++;pointOverrides={};pointsBlocked=false;book=null;records=[];issues=[];pm={};vm={};result=null;urls.splice(0).forEach(URL.revokeObjectURL);$('results').hidden=true;$('ack').checked=false;$('error').textContent='';$('status').textContent='';$('policy').value='blank';$('exportFeedback').textContent='';}
+function forget(){version++;book=null;records=[];issues=[];pm={};vm={};result=null;urls.splice(0).forEach(URL.revokeObjectURL);$('results').hidden=true;$('ack').checked=false;$('error').textContent='';$('status').textContent='';$('policy').value='blank';$('exportFeedback').textContent='';}
 function matchRows(target,items,choices,mapping,keyFor,labelFor,selected){target.replaceChildren();items.forEach(item=>{const key=keyFor(item),row=el('div');row.className='match';const label=el('label',labelFor(item)),select=el('select');select.id='match-'+target.id+'-'+target.children.length;label.htmlFor=select.id;const skip=el('option','Skip / not matched');skip.value='';select.append(skip);choices.forEach(c=>{const o=el('option',c.label);o.value=c.value;select.append(o);});select.value=selected[key];select.onchange=()=>{mapping[key]=select.value;render();};row.append(label,select);target.append(row);});}
 function render(){result=review(book,records,pm,vm,$('policy').value);$('ack').checked=false;$('exportFeedback').textContent='';$('results').hidden=false;matchRows($('people'),result.people,book.students.map(s=>({value:s.id,label:s.name+' · ID '+s.id})),pm,p=>p.person,p=>p.name+(p.username?' · '+p.username:''),result.personTargets);matchRows($('videos'),result.titles,book.assignments.map(a=>({value:String(a.col),label:a.title+' · '+a.max+' points'})),vm,t=>t,t=>t,result.videoTargets);
- $('personCount').textContent='('+result.people.filter(p=>!result.personTargets[p.person]).length+' unmatched)';$('videoCount').textContent='('+result.titles.filter(t=>result.videoTargets[t]==='').length+' unmatched)';$('counts').textContent=result.changes.length+' grade changes ready · '+result.skipped.length+' records skipped';$('preview').replaceChildren();result.changes.forEach(c=>{const tr=el('tr');[c.student.name,c.assignment.title,c.old||'Blank',c.score.toFixed(2)+' / '+c.assignment.max].forEach(t=>tr.append(el('td',t)));$('preview').append(tr);});const messages=[...issues,...result.skipped.map(s=>s.name+' · '+s.video+': '+s.reason)];$('issues').replaceChildren(...messages.map(m=>el('li',m)));$('issueCount').textContent='('+messages.length+')';renderPoints();updateExport();
+ $('personCount').textContent='('+result.people.filter(p=>!result.personTargets[p.person]).length+' unmatched)';$('videoCount').textContent='('+result.titles.filter(t=>result.videoTargets[t]==='').length+' unmatched)';$('counts').textContent=result.changes.length+' grade changes ready · '+result.skipped.length+' records skipped';$('preview').replaceChildren();result.changes.forEach(c=>{const tr=el('tr');[c.student.name,c.assignment.title,c.old||'Blank',c.score.toFixed(2)+' / '+c.assignment.max].forEach(t=>tr.append(el('td',t)));$('preview').append(tr);});const messages=[...issues,...result.skipped.map(s=>s.name+' · '+s.video+': '+s.reason)];$('issues').replaceChildren(...messages.map(m=>el('li',m)));$('issueCount').textContent='('+messages.length+')';updateExport();
  const missingPeople=result.people.filter(p=>!result.personTargets[p.person]).length,missingVideos=result.titles.filter(t=>result.videoTargets[t]==='').length;
  $('people').closest('details').open=missingPeople>0;
  $('videos').closest('details').open=true;
  if(!result.changes.length){const tr=el('tr'),td=el('td','No grade changes are ready yet. See the explanation below.');td.colSpan=4;tr.append(td);$('preview').append(tr);}
-}
-function renderPoints(){
- $('pointsFields').replaceChildren();pointsBlocked=false;
- const columns=[...new Set(Object.values(result.videoTargets).filter(v=>v!==''))];
- columns.forEach(col=>{const a=book.assignments.find(a=>String(a.col)===col);if(!a)return;
-  const row=el('div'),label=el('label',a.title),input=el('input');row.className='match';input.type='number';input.min='0.01';input.step='0.01';input.id='points-'+col;label.htmlFor=input.id;input.value=Object.hasOwn(pointOverrides,col)?pointOverrides[col]:String(a.max);
-  const val=Number(input.value),valid=input.value.trim()!==''&&Number.isFinite(val)&&val>0&&val===a.max;
-  input.setAttribute('aria-invalid',String(!valid));if(!valid)pointsBlocked=true;
-  input.onchange=()=>{pointOverrides[col]=input.value;$('ack').checked=false;$('exportFeedback').textContent='';renderPoints();updateExport();};
-  row.append(label,input);$('pointsFields').append(row);
- });
- if(!columns.length)$('pointsFields').append(el('p','Choose the matching Canvas assignments above to see their point totals.'));
- $('pointsWarning').textContent=pointsBlocked?'The entered points do not match the Canvas gradebook. Restore the displayed Canvas total, or change the points possible in Canvas and load a fresh gradebook CSV. Changing this field does not change Canvas.':'The point totals match Canvas. Scores will be converted automatically.';
- if(pointsBlocked)columns.forEach(col=>{const a=book.assignments.find(a=>String(a.col)===col);if(a&&Object.hasOwn(pointOverrides,col)&&Number(pointOverrides[col])!==a.max)$('pointsWarning').append(el('span',' '+a.title+': Canvas currently uses '+a.max+' points.'));});
 }
 function updateExport(){
  const cols=[...new Set(result.changes.map(c=>c.assignment.col))];
@@ -30,9 +16,9 @@ function updateExport(){
  cols.forEach(col=>{const a=book.assignments.find(a=>a.col===col),n=result.changes.filter(c=>c.assignment.col===col).length,o=el('option',a.title+' ('+n+' students)');o.value=String(col);select.append(o);});
  if(cols.includes(Number(previous))&&previous!=='')select.value=previous;
  $('exportChoice').hidden=cols.length<2;
- $('ack').disabled=!cols.length||pointsBlocked;
- $('exportButton').disabled=!cols.length||!$('ack').checked||pointsBlocked;
- if(pointsBlocked){$('exportHelp').textContent='Before exporting, fix the points possible above so they match the Canvas assignment. This prevents grades being imported on the wrong scale.';}else if(!cols.length){
+ $('ack').disabled=!cols.length;
+ $('exportButton').disabled=!cols.length||!$('ack').checked;
+ if(!cols.length){
   const missingPeople=result.people.filter(p=>!result.personTargets[p.person]).length,missingVideos=result.titles.filter(t=>result.videoTargets[t]==='').length;
   let reason='';
   if(!records.length)reason='No usable Edpuzzle scores were found. Open “Scores left out and file problems” above for details, then check your Edpuzzle file.';
@@ -46,7 +32,7 @@ function updateExport(){
 $('ack').onchange=updateExport;
 $('exportAssignment').onchange=()=>{$('exportFeedback').textContent='';};
 $('exportButton').onclick=()=>{
- if(!result||!$('ack').checked||!result.changes.length||pointsBlocked)return;
+ if(!result||!$('ack').checked||!result.changes.length)return;
  const col=Number($('exportAssignment').value),a=book.assignments.find(a=>a.col===col);if(!a)return;
  const url=URL.createObjectURL(new Blob([output(book,result.changes,col)],{type:'text/csv;charset=utf-8'}));urls.push(url);
  const link=el('a');link.href=url;link.download='canvas-'+a.title.replace(/[^a-z0-9]+/gi,'-').slice(0,100)+'.csv';document.body.append(link);link.click();link.remove();
