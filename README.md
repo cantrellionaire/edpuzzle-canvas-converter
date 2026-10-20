@@ -24,3 +24,12 @@ Name normalization removes accents and punctuation. Always review matches, parti
 Static files; no build or dependencies. GitHub Pages: deploy `main` / repository root. Serve locally using any static server. Run `npm test` (Node 18+). The built-in sample uses fictional students only. No live Canvas import or real classroom trial is included in automated tests.
 
 Keep actual gradebooks out of this repository.
+
+## Design and assets
+
+MCC blue (#004b8d) and gold (#ffc20e), with the user-supplied MCC wolf. Drop CSVs into either file panel or use the accessible file picker. Canvas accepts one CSV; Edpuzzle accepts multiple. New file selections reset the grade review.
+
+Edpuzzle mark: https://image.edpuzzle.com/favicons/favicon-32.png
+Canvas mark: https://github.com/instructure/canvas-lms/blob/master/public/images/canvas-logo.svg (viewBox cropped to the logomark)
+
+Brand assets are stored locally so opening the page does not request images from third-party servers. Logos remain the property of their respective owners.
