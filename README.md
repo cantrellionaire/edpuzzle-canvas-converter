@@ -5,7 +5,7 @@ A standalone, browser-only CSV converter. Upload a fresh Canvas gradebook and on
 ## Safeguards
 
 - Exact unique normalized matches only; ambiguous matches require a manual selection.
-- Existing numeric grades, including zero, are protected by default. Optional raise-only and replace policies are explicit. Excused/nonnumeric grades always stay protected.
+- By default, blanks are filled and lower numeric Canvas grades (including zero and partial scores) are increased. Equal or higher grades and excused/nonnumeric grades stay protected. Optional blank-only and replace policies remain available.
 - Missing/invalid Edpuzzle scores are skipped, never converted to zero. Percentages scale to Canvas assignment points.
 - Each output preserves Canvas student IDs and exact assignment header, and includes only proposed changes for that assignment.
 - Different source identities mapping to the same student/assignment block that update. Repeated scores for the same identity use the highest percentage.
@@ -21,7 +21,7 @@ Name normalization removes accents and punctuation. Always review matches, parti
 
 ## Hosting and tests
 
-Static files; no build or dependencies. GitHub Pages: deploy `main` / repository root. Serve locally using any static server. Run `npm test` (Node 18+). The built-in sample uses fictional students only. No live Canvas import or real classroom trial is included in automated tests.
+Static files; no build or dependencies. GitHub Pages: deploy `main` / repository root. Serve locally using any static server. Run `npm test` (Node 18+). Automated tests use fictional students only. No live Canvas import or real classroom trial is included in automated tests.
 
 Keep actual gradebooks out of this repository.
 
@@ -33,3 +33,7 @@ Edpuzzle mark: https://image.edpuzzle.com/favicons/favicon-32.png
 Canvas mark: https://github.com/instructure/canvas-lms/blob/master/public/images/canvas-logo.svg (viewBox cropped to the logomark)
 
 Brand assets are stored locally so opening the page does not request images from third-party servers. Logos remain the property of their respective owners.
+
+## Updating in-progress scores
+
+Export fresh CSVs from both systems each time. The default increase-only policy replaces earlier partial grades with higher Edpuzzle scores. A CSV score alone does not establish completion, so partial scores may still be included; export after students finish if you want only final grades. Review the proposed changes before importing into Canvas.
