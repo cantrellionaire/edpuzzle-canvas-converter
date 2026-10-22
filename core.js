@@ -28,4 +28,23 @@ export function review(book,records,peopleMap={},videoMap={},policy='raise'){
  const groups=new Map(),skipped=[];records.forEach(r=>{const sid=personTargets[r.person],col=videoTargets[r.video];if(!sid||col===''){skipped.push({...r,reason:'Student or assignment not matched'});return;}const student=book.students.find(s=>s.id===sid),assignment=book.assignments.find(a=>String(a.col)===col);if(!student||!assignment)return;const key=JSON.stringify([sid,col]);if(!groups.has(key))groups.set(key,{student,assignment,records:[]});groups.get(key).records.push(r);});
  const changes=[];groups.forEach(g=>{const {student,assignment}=g;const persons=new Set(g.records.map(r=>r.person));if(persons.size>1){skipped.push({name:student.name,video:assignment.title,reason:'Multiple Edpuzzle students map to this Canvas student; resolve the match'});return;}const pct=Math.max(...g.records.map(r=>r.percent)),score=Math.round(pct*assignment.max)/100,old=student.row[assignment.col].trim();let reason='';if(old!==''&&!/^\d+(?:\.\d+)?$/.test(old))reason='Existing nonnumeric grade protected';else if(old!==''&&policy==='blank')reason='Existing grade protected';else if(old!==''&&Number(old)===score)reason='Already matches';else if(old!==''&&policy==='raise'&&score<Number(old))reason='Existing higher grade protected';if(reason)skipped.push({name:student.name,video:assignment.title,reason});else changes.push({student,assignment,old,score,percent:pct});});return {people,titles,personTargets,videoTargets,changes,skipped};}
 export const csvLine=cells=>cells.map(x=>{const s=String(x??'');return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',');
-export function output(book,changes,col){const a=book.assignments.find(a=>a.col===col),cols=[...book.identity,col];return '\uFEFF'+[csvLine(cols.map(i=>book.head[i])),csvLine(cols.map(i=>i===col?a.max:i===book.si?'Points Possible':'')),...changes.filter(c=>c.assignment.col===col).map(c=>csvLine(cols.map(i=>i===col?c.score.toFixed(2):c.student.row[i])))].join('\r\n')+'\r\n';}
+// Only changed assignments/students are included. In a multi-assignment CSV,
+// carry forward the Canvas snapshot for every unchanged cross-cell. Never use
+// an empty placeholder for a protected existing grade.
+export function outputMany(book,changes,requestedCols){
+ const wanted=new Set(requestedCols);
+ const assignments=book.assignments.filter(a=>wanted.has(a.col)&&changes.some(c=>c.assignment.col===a.col));
+ if(!assignments.length)throw Error('No reviewed grade changes to export.');
+ const assignmentCols=new Set(assignments.map(a=>a.col));
+ const selected=changes.filter(c=>assignmentCols.has(c.assignment.col));
+ const updates=new Map();
+ selected.forEach(c=>{if(!updates.has(c.student.id))updates.set(c.student.id,new Map());updates.get(c.student.id).set(c.assignment.col,c.score.toFixed(2));});
+ const cols=[...book.identity,...assignments.map(a=>a.col)];
+ const points=new Map(assignments.map(a=>[a.col,a.max]));
+ return '\uFEFF'+[
+  csvLine(cols.map(i=>book.head[i])),
+  csvLine(cols.map(i=>points.has(i)?points.get(i):i===book.si?'Points Possible':'')),
+  ...book.students.filter(s=>updates.has(s.id)).map(s=>csvLine(cols.map(i=>updates.get(s.id).has(i)?updates.get(s.id).get(i):s.row[i])))
+ ].join('\r\n')+'\r\n';
+}
+export function output(book,changes,col){return outputMany(book,changes,[col]);}
